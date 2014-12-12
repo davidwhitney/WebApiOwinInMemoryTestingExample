@@ -24,7 +24,8 @@ namespace Api.Test.Acceptance.ValueApi
             var response = HttpClient.GetAsync("/values/totally-not-a-number").Result;
             var body = response.Content.ReadAsStringAsync().Result;
 
-            Assert.That(body, Is.StringContaining("5"));
+            Assert.That(response.IsSuccessStatusCode, Is.False);
+            Assert.That(body, Is.StringContaining("The request is invalid."));
         }
     }
 }

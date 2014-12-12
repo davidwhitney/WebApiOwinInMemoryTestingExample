@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
@@ -16,7 +15,6 @@ namespace Api.Test.Acceptance
     {
         private IDisposable _app;
         protected HttpClient HttpClient;
-        protected string TestServerUri = "http://localhost";
         private IDictionary<Type, Mock> _mocks;
         
         [TestFixtureSetUp]
@@ -25,23 +23,14 @@ namespace Api.Test.Acceptance
             var port = FreeTcpPort();
             _mocks = new ConcurrentDictionary<Type, Mock>();
 
-            HttpClient = new HttpClient { BaseAddress = new Uri(TestServerUri + ":" + port) };
-            _app = WebApp.Start<Startup>(TestServerUri + ":" + port);
+            HttpClient = new HttpClient { BaseAddress = new Uri("http://localhost:" + port) };
+            _app = WebApp.Start<Startup>("http://localhost:" + port);
         }
 
         [TestFixtureTearDown]
         public void FixtureTearDown()
         {
             _app.Dispose();
-        }
-
-        static int FreeTcpPort()
-        {
-            var l = new TcpListener(IPAddress.Loopback, 0);
-            l.Start();
-            var port = ((IPEndPoint)l.LocalEndpoint).Port;
-            l.Stop();
-            return port;
         }
         
         public Mock<T> MockOut<T>() where T : class
@@ -66,6 +55,15 @@ namespace Api.Test.Acceptance
                 var item1 = item;
                 Startup.Container.Bind(item.Key).ToMethod(_ => _mocks[item1.Key].Object);
             }
+        }
+
+        private static int FreeTcpPort()
+        {
+            var l = new TcpListener(IPAddress.Loopback, 0);
+            l.Start();
+            var port = ((IPEndPoint)l.LocalEndpoint).Port;
+            l.Stop();
+            return port;
         }
     }
 }

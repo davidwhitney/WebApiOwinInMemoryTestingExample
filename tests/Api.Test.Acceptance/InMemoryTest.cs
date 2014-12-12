@@ -1,27 +1,71 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using Microsoft.Owin.Hosting;
+using Moq;
 using NUnit.Framework;
 
 namespace Api.Test.Acceptance
 {
+    [TestFixture]
     public abstract class InMemoryTest
     {
         private IDisposable _app;
         protected HttpClient HttpClient;
-        protected string TestServerUri = "http://localhost:12345";
-
+        protected string TestServerUri = "http://localhost";
+        private IDictionary<Type, Mock> _mocks;
+        
         [TestFixtureSetUp]
-        public void FixtureSetup()
+        public void FixtureSetUp()
         {
-            _app = WebApp.Start<Startup>(TestServerUri);
-            HttpClient = new HttpClient {BaseAddress = new Uri(TestServerUri)};
+            var port = FreeTcpPort();
+            _mocks = new ConcurrentDictionary<Type, Mock>();
+
+            HttpClient = new HttpClient { BaseAddress = new Uri(TestServerUri + ":" + port) };
+            _app = WebApp.Start<Startup>(TestServerUri + ":" + port);
         }
 
         [TestFixtureTearDown]
         public void FixtureTearDown()
         {
             _app.Dispose();
+        }
+
+        static int FreeTcpPort()
+        {
+            var l = new TcpListener(IPAddress.Loopback, 0);
+            l.Start();
+            var port = ((IPEndPoint)l.LocalEndpoint).Port;
+            l.Stop();
+            return port;
+        }
+        
+        public Mock<T> MockOut<T>() where T : class
+        {
+            if (_mocks.ContainsKey(typeof(T)))
+            {
+                RebindToConfiguredMocks();
+                return (Mock<T>)_mocks[typeof(T)];
+            }
+
+            _mocks.Add(typeof(T), new Mock<T>());
+            RebindToConfiguredMocks();
+
+            return (Mock<T>)_mocks[typeof(T)];
+        }
+
+        private void RebindToConfiguredMocks()
+        {
+            foreach (var item in _mocks)
+            {
+                Startup.Container.Unbind(item.Key);
+                var item1 = item;
+                Startup.Container.Bind(item.Key).ToMethod(_ => _mocks[item1.Key].Object);
+            }
         }
     }
 }

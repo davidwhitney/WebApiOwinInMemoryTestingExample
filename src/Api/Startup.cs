@@ -1,10 +1,8 @@
-﻿using System;
-using System.Net;
-using System.Net.Http;
-using System.Web.Http;
-using System.Web.Http.Filters;
+﻿using System.Web.Http;
 using Api;
 using Microsoft.Owin;
+using Ninject;
+using Ninject.Extensions.Conventions;
 using Owin;
 
 [assembly: OwinStartup(typeof(Startup))]
@@ -12,6 +10,8 @@ namespace Api
 {
     public class Startup
     {
+        public static IKernel Container { get; private set; }
+
         public void Configuration(IAppBuilder appBuilder)
         {
             var config = new HttpConfiguration();
@@ -22,22 +22,11 @@ namespace Api
                 defaults: new { id = RouteParameter.Optional }
             );
 
+            Container = new StandardKernel();  
+            Container.Bind(x => x.FromThisAssembly().SelectAllClasses().BindAllInterfaces());
+            config.DependencyResolver = new NinjectDependencyResolver(Container);
+     
             appBuilder.UseWebApi(config);
-
-            config.Filters.Add(new NotImplExceptionFilterAttribute());
-        }
-    }
-
-    public class NotImplExceptionFilterAttribute : ExceptionFilterAttribute
-    {
-        public override void OnException(HttpActionExecutedContext context)
-        {
-            if (context.Exception is NotImplementedException)
-            {
-                context.Response = new HttpResponseMessage(HttpStatusCode.NotImplemented);
-            }
-
-            base.OnException(context);
         }
     }
 }

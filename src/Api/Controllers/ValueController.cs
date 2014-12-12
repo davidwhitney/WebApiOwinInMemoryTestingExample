@@ -1,21 +1,22 @@
-﻿using System.Collections.Generic;
-using System.Web.Http;
+﻿using System.Web.Http;
+using Api.ApplicationServices;
 
 namespace Api.Controllers
 {
     public class ValuesController : ApiController
     {
-        public Values Get(int id)
+        private readonly IGetValues _dependency;
+
+        public ValuesController(IGetValues dependency)
         {
-            return new Values
-            {
-                "value" + 5
-            };
+            _dependency = dependency;
         }
 
-    }
+        public Values Get(int id)
+        {
+            var value = _dependency.GetAValue(id);
+            return new Values { "value" + value };
+        }
 
-    public class Values : List<string>
-    {
     }
 }

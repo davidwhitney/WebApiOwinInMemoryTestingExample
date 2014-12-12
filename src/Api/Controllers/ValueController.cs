@@ -1,12 +1,21 @@
-﻿using System.Web.Http;
+﻿using System.Collections.Generic;
+using System.Web.Http;
 
 namespace Api.Controllers
 {
     public class ValuesController : ApiController
     {
-        public string Get(int id)
+        public Values Get(int id)
         {
-            return "value" + id;
+            return new Values
+            {
+                "value" + 5
+            };
         }
+
+    }
+
+    public class Values : List<string>
+    {
     }
 }
